@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for
 from config import Config
-from models import User, CheckIn, init_db
+from models import User, CheckIn, init_db, get_db
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
+import atexit
 import os
 
 app = Flask(__name__)
@@ -75,6 +78,56 @@ def settings():
         return render_template('settings.html', user=user, success=True, token=token)
 
     return render_template('settings.html', user=user, token=token)
+
+
+def check_and_send_warnings():
+    """检查所有用户并发送预警邮件"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users')
+        users = cursor.fetchall()
+    finally:
+        conn.close()
+
+    now = datetime.now()
+
+    for user_row in users:
+        user = User.get_by_id(user_row['id'])
+
+        if not user.last_checkin:
+            # 从未签到，不发送预警
+            continue
+
+        # 计算距离上次签到的小时数
+        last_checkin_time = datetime.strptime(user.last_checkin, '%Y-%m-%d %H:%M:%S')
+        hours_since_checkin = (now - last_checkin_time).total_seconds() / 3600
+
+        # 检查是否超过预警间隔
+        if hours_since_checkin >= user.warning_interval_hours:
+            # 检查是否已经发送过预警（24小时内不重复发送）
+            if user.last_warning_sent:
+                last_warning_time = datetime.strptime(user.last_warning_sent, '%Y-%m-%d %H:%M:%S')
+                hours_since_warning = (now - last_warning_time).total_seconds() / 3600
+                if hours_since_warning < 24:
+                    continue
+
+            # 发送预警邮件
+            from utils.email import send_warning_email
+            success = send_warning_email(user.emergency_email, user.name)
+
+            if success:
+                user.update_last_warning_sent()
+                print(f"已向 {user.emergency_email} 发送预警邮件 (用户: {user.name})")
+
+
+# 启动定时任务
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=check_and_send_warnings, trigger="interval", minutes=1)
+scheduler.start()
+
+# 程序退出时关闭调度器
+atexit.register(lambda: scheduler.shutdown())
 
 
 if __name__ == '__main__':
