@@ -1,7 +1,7 @@
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import current_app
 
 def send_warning_email(to_email, user_name):
     """
@@ -35,5 +35,5 @@ def send_warning_email(to_email, user_name):
             server.sendmail(Config.MAIL_USERNAME, to_email, msg.as_string())
         return True
     except Exception as e:
-        print(f"发送邮件失败: {e}")
+        logging.error(f"发送邮件失败: {e}")
         return False
