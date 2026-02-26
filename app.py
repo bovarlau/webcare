@@ -5,6 +5,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import atexit
 import os
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -82,43 +87,48 @@ def settings():
 
 def check_and_send_warnings():
     """检查所有用户并发送预警邮件"""
-    conn = get_db()
     try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users')
-        users = cursor.fetchall()
-    finally:
-        conn.close()
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users')
+            users = cursor.fetchall()
+        finally:
+            conn.close()
 
-    now = datetime.now()
+        now = datetime.now()
 
-    for user_row in users:
-        user = User.get_by_id(user_row['id'])
+        for user_row in users:
+            # 使用 _from_row 直接从查询结果创建 User 对象，避免 N+1 查询
+            user = User._from_row(user_row)
 
-        if not user.last_checkin:
-            # 从未签到，不发送预警
-            continue
+            if not user.last_checkin:
+                # 从未签到，不发送预警
+                continue
 
-        # 计算距离上次签到的小时数
-        last_checkin_time = datetime.strptime(user.last_checkin, '%Y-%m-%d %H:%M:%S')
-        hours_since_checkin = (now - last_checkin_time).total_seconds() / 3600
+            # 计算距离上次签到的小时数
+            last_checkin_time = datetime.strptime(user.last_checkin, '%Y-%m-%d %H:%M:%S')
+            hours_since_checkin = (now - last_checkin_time).total_seconds() / 3600
 
-        # 检查是否超过预警间隔
-        if hours_since_checkin >= user.warning_interval_hours:
-            # 检查是否已经发送过预警（24小时内不重复发送）
-            if user.last_warning_sent:
-                last_warning_time = datetime.strptime(user.last_warning_sent, '%Y-%m-%d %H:%M:%S')
-                hours_since_warning = (now - last_warning_time).total_seconds() / 3600
-                if hours_since_warning < 24:
-                    continue
+            # 检查是否超过预警间隔
+            if hours_since_checkin >= user.warning_interval_hours:
+                # 检查是否已经发送过预警（24小时内不重复发送）
+                if user.last_warning_sent:
+                    last_warning_time = datetime.strptime(user.last_warning_sent, '%Y-%m-%d %H:%M:%S')
+                    hours_since_warning = (now - last_warning_time).total_seconds() / 3600
+                    if hours_since_warning < 24:
+                        continue
 
-            # 发送预警邮件
-            from utils.email import send_warning_email
-            success = send_warning_email(user.emergency_email, user.name)
+                # 发送预警邮件
+                from utils.email import send_warning_email
+                success = send_warning_email(user.emergency_email, user.name)
 
-            if success:
-                user.update_last_warning_sent()
-                print(f"已向 {user.emergency_email} 发送预警邮件 (用户: {user.name})")
+                if success:
+                    user.update_last_warning_sent()
+                    logger.info(f"已向 {user.emergency_email} 发送预警邮件 (用户: {user.name})")
+
+    except Exception as e:
+        logger.error(f"定时任务执行失败: {str(e)}")
 
 
 # 启动定时任务
