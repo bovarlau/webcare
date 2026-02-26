@@ -203,6 +203,10 @@ class CheckIn:
         checkin_id = cursor.lastrowid
         conn.close()
 
+        # 更新用户的最后签到时间
+        user = User.get_by_id(user_id)
+        user.update_last_checkin()
+
         return cls.get_by_id(checkin_id)
 
     @classmethod
