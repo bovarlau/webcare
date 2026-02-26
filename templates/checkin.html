@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>签到</h1>
+
+{% if success %}
+<div class="success">
+    <p>签到成功！</p>
+    <p>签到时间: {{ checkin_time }}</p>
+</div>
+{% endif %}
+
+{% if last_checkin %}
+<div class="info">
+    <p>上次签到: {{ last_checkin }}</p>
+</div>
+{% endif %}
+
+<a href="/?token={{ request.args.get('token', '') }}" class="btn">返回首页</a>
+{% endblock %}

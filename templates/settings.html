@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>设置</h1>
+
+<form method="POST" action="/settings?token={{ user.unique_user_token }}">
+    <label>预警时间间隔:</label>
+    <select name="warning_interval" required>
+        <option value="2" {% if user.warning_interval_hours == 2 %}selected{% endif %}>2 小时</option>
+        <option value="24" {% if user.warning_interval_hours == 24 %}selected{% endif %}>1 天</option>
+        <option value="48" {% if user.warning_interval_hours == 48 %}selected{% endif %}>2 天</option>
+        <option value="72" {% if user.warning_interval_hours == 72 %}selected{% endif %}>3 天</option>
+    </select>
+
+    <button type="submit" class="btn">保存设置</button>
+</form>
+
+<div class="token-link">
+    <p>您的专属链接（请保存）:</p>
+    <p>{{ request.url_root }}?token={{ user.unique_user_token }}</p>
+</div>
+
+<a href="/?token={{ user.unique_user_token }}" class="btn btn-secondary">返回首页</a>
+{% endblock %}

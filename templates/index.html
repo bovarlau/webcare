@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>WebCare 签到打卡</h1>
+
+{% if user %}
+<div class="user-info">
+    <p>欢迎，<strong>{{ user.name }}</strong></p>
+    <p>上次签到: {{ user.last_checkin if user.last_checkin else '从未签到' }}</p>
+</div>
+
+<a href="/checkin?token={{ user.unique_user_token }}" class="btn">签到</a>
+<a href="/settings?token={{ user.unique_user_token }}" class="btn btn-secondary">设置</a>
+
+<div class="info">
+    <p>紧急联系人: {{ user.emergency_email }}</p>
+    <p>预警间隔: {{ user.warning_interval_hours }} 小时</p>
+</div>
+
+<div class="token-link">
+    <p>您的专属链接（请保存）:</p>
+    <p>{{ request.url_root }}?token={{ user.unique_user_token }}</p>
+</div>
+
+{% else %}
+<div class="info">
+    <p>欢迎使用 WebCare！请先注册，设置您的姓名和紧急联系人邮箱。</p>
+</div>
+
+<a href="/register" class="btn">立即注册</a>
+{% endif %}
+{% endblock %}
