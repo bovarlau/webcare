@@ -67,7 +67,10 @@ def settings():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        warning_interval = int(request.form.get('warning_interval', 48))
+        try:
+            warning_interval = int(request.form.get('warning_interval', 48))
+        except ValueError:
+            warning_interval = 48  # 默认值，如果转换失败使用默认值
         user.update_warning_interval(warning_interval)
         return render_template('settings.html', user=user, success=True, token=token)
 
@@ -75,4 +78,5 @@ def settings():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
