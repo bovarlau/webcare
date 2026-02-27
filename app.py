@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
+from dotenv import load_dotenv
+load_dotenv()
+
 from config import Config
 from models import User, CheckIn, init_db, get_db
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -13,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# 错误处理器
+@app.errorhandler(500)
+def internal_error(e):
+    return f"服务器错误: {str(e)}", 500
 
 # 确保数据库存在
 if not os.path.exists(Config.DATABASE_PATH):

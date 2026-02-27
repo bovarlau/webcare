@@ -137,20 +137,21 @@ class User:
 
     def update_last_checkin(self):
         """更新最后签到时间"""
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db()
         try:
             cursor = conn.cursor()
 
             cursor.execute(
-                'UPDATE users SET last_checkin = CURRENT_TIMESTAMP WHERE id = ?',
-                (self.id,)
+                'UPDATE users SET last_checkin = ? WHERE id = ?',
+                (now, self.id)
             )
 
             conn.commit()
         finally:
             conn.close()
 
-        self.last_checkin = datetime.now()
+        self.last_checkin = now
 
     def update_warning_interval(self, hours):
         """更新预警间隔"""
@@ -171,20 +172,21 @@ class User:
 
     def update_last_warning_sent(self):
         """更新最后发送预警时间"""
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db()
         try:
             cursor = conn.cursor()
 
             cursor.execute(
-                'UPDATE users SET last_warning_sent = CURRENT_TIMESTAMP WHERE id = ?',
-                (self.id,)
+                'UPDATE users SET last_warning_sent = ? WHERE id = ?',
+                (now, self.id)
             )
 
             conn.commit()
         finally:
             conn.close()
 
-        self.last_warning_sent = datetime.now()
+        self.last_warning_sent = now
 
 
 class CheckIn:
@@ -210,13 +212,14 @@ class CheckIn:
     @classmethod
     def create(cls, user_id):
         """创建签到记录"""
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db()
         try:
             cursor = conn.cursor()
 
             cursor.execute(
-                'INSERT INTO checkins (user_id) VALUES (?)',
-                (user_id,)
+                'INSERT INTO checkins (user_id, checkin_time) VALUES (?, ?)',
+                (user_id, now)
             )
 
             conn.commit()
